@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+  <head>
+    <meta charset="utf-8">
+    <title>CCC feature comparison</title>
+    <script type="text/javascript" src="https://d3js.org/d3.v3.min.js"></script>
+    <style type="text/css">
+      .axis path,
+      .axis line{
+        fill: none;
+        stroke: white;
+        shape-rendering: crispEdges;
+      }
+      .axis text{
+        font-family: sans-serif;
+        font-size: 12px;
+      }
+      #tooltip {
+              position: absolute;
+              width: 200px;
+              height: auto;
+              padding: 10px;
+              background-color: white;
+              -webkit-border-radius: 10px;
+              -moz-border-radius: 10px;
+              border-radius: 10px;
+              -webkit-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+              -moz-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+              box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+              pointer-events: none;
+      }
+
+      #tooltip.hidden {
+              display: none;
+      }
+
+      #tooltip p {
+              margin: 0;
+              font-family: sans-serif;
+              font-size: 16px;
+              line-height: 20px;
+      }
+
+      .tick line {
+        stroke: white;
+      }
+
+    </style>
+  </head>
+  <body>
+    <div id="tooltip" class="hidden">
+        <p><strong>Feature:</strong></p>
+        <p><span id="value"></span></p>
+    </div>
+
+    <script type="text/javascript">
+
+      dataset = [["1","pm_feature_1","PM","Intensity","Proportion over 100 inside lesion","3D","no","1","0.9951","0.9955","0.9923","0.993209872","0.993269338","0.114919191"],
+                 ["2","pm_feature_2","PM","Intensity","Mean intensity","3D","no","1","0.9585","0.9716","0.9448","0.9490189128","0.9478901369","-0.32671239768"],
+                 ["3","pm_feature_3","PM","Size","Number of voxels","3D","no","1","0.8738","0.9675","0.8862","0.878530075787896","0.696961082900","0.610196978"],
+                 ["4","pm_feature_4","PM","Size","Volume","3D","no","1","0.8712","0.9634","0.8808","0.873970781513187","0.68680812957362","0.522692249809862"],
+                 ["5","pm_feature_5","PM","Size","Surface area","3D","no","1","0.9133","0.9496","0.8948","0.892130090215004","0.82718866586593","0.43888263822054"],
+                 ["6","pm_feature_6","PM","Shape","Volume/surface area","3D","no","1","0.8883","0.1787","0.1655","0.340741901490543","0.15125819873644","1.04802790306604"],
+                 ["7","pm_feature_7","PM","Shape","Sphericity","3D","no","1","0.9357","0.044","0.0421","0.262494876369084","0.147641658435614","1.30871500557585"],
+                 ["8","pm_feature_8","PM","Intensity","Max (HU)","3D","no","1","0.8937","0.8831","0.8206","0.84108480543098","0.825468031537017","0.39041684020548"],
+                 ["9","pm_feature_9","PM","Intensity","Min (HU)","3D","no","1","0.5646","0.7201","0.5255","0.551769818560561","0.549448744849031","-0.175208318705537"],
+                 ["10","pm_feature_10","PM","Texture","Entropy","3D","no","1","0.9011","0.9497","0.8872","0.891628489059694","0.893099875525968","0.158658889541273"]];
+
+
+      var svg_height = 330;
+      var svg_width = 700;
+
+      //set up paddings
+      var top_padding = 30;
+      //var botton_padding = 40;
+      var left_padding = 50;
+      var legend_width = 100;
+
+      //the size of the graph is 500x250
+      var graph_width = 500;
+      var graph_height = 250;
+      var bin_size_x = 0.05;
+      var num_of_bins_x = 20;
+      var bin_size_y = 0.1;
+      var num_of_bins_y = 0;//will be calculated as the max bin count
+
+      //initialize bins array
+      var bins = [];
+      for(i=0; i<num_of_bins_x; i++){
+        bins.push(0);
+      }
+
+      //add bin count
+      var norm_count = 0;
+      var bin_num = 0;
+      for(i=0; i<dataset.length; i++){
+        bin_num = Math.floor(dataset[i][8]/bin_size_x);
+        if (bin_num >= num_of_bins_x){//correct for the last bin
+          bin_num = num_of_bins_x - 1;
+        }
+
+        //calculate histogram's x and y
+        //x is the bin coordinate and y is normalized bin count
+        var x = bin_num*bin_size_x;
+        var y = bins[bin_num]/dataset.length;
+        dataset[i].push(x, y);
+        //console.log(x, y);
+        bins[bin_num]++;
+      }
+
+      //find the max value of normalized bin count
+      //will need it for find the y scale
+      var num_of_bins_y = 0;
+      for(i=0; i<num_of_bins_x; i++){
+        if(bins[i] > num_of_bins_y){
+          num_of_bins_y = bins[i];
+        }
+      }
+      var max_norm_count = num_of_bins_y/dataset.length;
+      //console.log("max_norm_count " + max_norm_count);
+
+      //calculate the bin width and height in pixels
+      var bin_width_px = graph_width/num_of_bins_x - 1;
+      var bin_height_px = graph_height/num_of_bins_y;
+
+      var svg1 = d3.select("body").append("svg");
+      svg1.attr("width", svg_width).attr("height", svg_height);
+
+      //add graph title
+      svg1.append("text")
+      .attr("x", 200)
+      .attr("y", 18)
+      .text("Histogram of Intra CCC");
+
+      //add graph area
+      svg1.append("rect")
+      .attr("x", left_padding)
+      .attr("y", top_padding)
+      .attr("width", graph_width)
+      .attr("height", graph_height)
+      .attr("fill", "#F5F5F5")
+      //.attr("fill", "grey");
+
+      var xScale = d3.scale.linear()
+      .domain([0,1])
+      .range([left_padding, left_padding+graph_width]);
+
+      var yScale = d3.scale.linear()
+      .domain([0, max_norm_count])
+      .range([top_padding+graph_height, top_padding]);
+
+      function select_color(featureClass){
+        if (featureClass === "Intensity"){
+          return "#F8766D";//pink
+        }else if(featureClass === "Shape"){
+          return "#7CAE00";//green
+        }else if(featureClass === "Size"){
+          return "#00BFC4";//light blue
+        }else if(featureClass == "Texture"){
+          return "#C77CFF";//purple
+        }else{
+          return "black";//if not define return black
+        }
+      }
+
+      //add axis
+      xAxis = d3.svg.axis();
+      xAxis.scale(xScale).innerTickSize(-graph_height).outerTickSize(0);
+      yAxis = d3.svg.axis();
+      yAxis.scale(yScale).orient("left").innerTickSize(-graph_width).outerTickSize(0).ticks(5);
+
+      svg1.append("g").attr("class", "axis").attr("transform", "translate(0," + (top_padding + graph_height) + ")").call(xAxis);
+      svg1.append("g").attr("class", "axis").attr("transform", "translate(" + left_padding + ",0)").call(yAxis);
+
+      //add histograms
+      svg1.selectAll(".hists").data(dataset).enter().append("rect")
+      .attr("x", function(d, i){
+        //console.log(i);
+        //it contains bin number
+        return xScale(d[14]);
+      }).attr("y", function(d, i){
+        //countains bin count
+        return yScale(d[15]) - bin_height_px;
+      }).attr("width", bin_width_px)
+      .attr("height", bin_height_px)
+      .attr("fill", function(d){
+        return select_color(d[3]);
+      }).attr("class", "hists");
+
+      //add axis labels
+      svg1.append("text")
+      .attr("text-anchor", "middle")
+      .attr("transform", "translate("+ (left_padding+graph_width)/2 +","+ (top_padding + graph_height + 40) +")")
+      .text("CCC");
+
+      svg1.append("text")
+      .attr("text-anchor", "middle")
+      .attr("transform", "translate("+ (left_padding/4) +","+ (top_padding + graph_height)/2 +")rotate(-90)")
+      .text("Normalized count");
+
+      //prepare feature class array
+      arr = [];
+      for(i=0; i<dataset.length; i++){
+        arr.push(dataset[i][3]);
+      }
+      feature_class = [];
+      //make feature class array unique
+      for(i=0; i<arr.length; i++){
+        if (feature_class.indexOf(arr[i]) === -1){
+          feature_class.push(arr[i]);
+        }
+      }
+
+      // Add Legend title
+      svg1.append("text")
+      .attr("text-anchor", "middle")
+      .attr("transform", "translate("+ (left_padding+graph_width+legend_width/2) +","+ (top_padding + graph_height/4) +")")
+      .text("Feature Class:");
+
+      //add color map for feature class legend
+      svg1.selectAll(".legendRect").data(feature_class).enter().append("rect")
+      .attr("x", function(d,i){
+        return left_padding + graph_width + legend_width/4;
+      }).attr("y", function(d,i){
+        return top_padding + graph_height/3 + i*30;
+      })
+      .attr("width", 20)
+      .attr("height", 20)
+      .attr("fill", function(d,i){
+        return select_color(d);
+      }).attr("class", "legendRect");
+
+      //add Legend text
+      svg1.selectAll(".legendText").data(feature_class).enter().append("text")
+      .attr("x", function(){
+        return left_padding + graph_width + legend_width/4 + 30;
+      }).attr("y", function(d,i){
+        return top_padding + graph_height/3 + i*30 + 18;
+      }).text(function(d){
+        return d;
+      }).attr("class", "legendText");
+
+      //add tooltips and transitions
+      svg1.selectAll(".hists").on("mouseover", function(d,i){
+        //console.log("mouseover");
+
+        var xPosition = parseFloat(d3.select(this).attr("x")) + 1.5*bin_width_px;
+        var yPosition = parseFloat(d3.select(this).attr("y"));
+
+        d3.select(this).attr("fill", "orange");
+
+        d3.select("#tooltip")
+        .style("left", xPosition + "px")
+        .style("top", yPosition + "px")
+        .select("#value")
+        .text(d[4]);
+
+        //Show the tooltip
+        d3.select("#tooltip").classed("hidden", false);
+
+      }).on("mouseout", function(d,i){
+        //Hide the tooltip
+        d3.select(this).transition().duration(250).attr("fill", select_color(d[3]));
+        d3.select("#tooltip").classed("hidden", true);
+      });
+
+    </script>
+  </body>
+</html>
