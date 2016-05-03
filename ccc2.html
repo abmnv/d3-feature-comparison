@@ -93,7 +93,7 @@
       var norm_count = 0;
       var bin_num = 0;
       for(i=0; i<dataset.length; i++){
-        bin_num = Math.floor(dataset[i][8]/bin_size_x);
+        bin_num = Math.floor(dataset[i][9]/bin_size_x);
         if (bin_num >= num_of_bins_x){//correct for the last bin
           bin_num = num_of_bins_x - 1;
         }
@@ -127,9 +127,11 @@
 
       //add graph title
       svg1.append("text")
-      .attr("x", 200)
-      .attr("y", 18)
-      .text("Histogram of Intra CCC");
+      .attr("text-anchor", "middle")
+      .attr("transform", "translate("+ (left_padding + graph_width/2) +","+ (top_padding/2) +")")
+      //.attr("x", 200)
+      //.attr("y", 18)
+      .text("Histogram of Inter CCC (Reproducibility)");
 
       //add graph area
       svg1.append("rect")
@@ -137,7 +139,7 @@
       .attr("y", top_padding)
       .attr("width", graph_width)
       .attr("height", graph_height)
-      .attr("fill", "#F5F5F5")
+      .attr("fill", "#EBEBEB")
       //.attr("fill", "grey");
 
       var xScale = d3.scale.linear()
@@ -148,6 +150,7 @@
       .domain([0, max_norm_count])
       .range([top_padding+graph_height, top_padding]);
 
+      //given the feature class return color for that class
       function select_color(featureClass){
         if (featureClass === "Intensity"){
           return "#F8766D";//pink
@@ -189,12 +192,12 @@
       //add axis labels
       svg1.append("text")
       .attr("text-anchor", "middle")
-      .attr("transform", "translate("+ (left_padding+graph_width)/2 +","+ (top_padding + graph_height + 40) +")")
+      .attr("transform", "translate("+ (left_padding+graph_width/2) +","+ (top_padding + graph_height + 1.2*top_padding) +")")
       .text("CCC");
 
       svg1.append("text")
       .attr("text-anchor", "middle")
-      .attr("transform", "translate("+ (left_padding/4) +","+ (top_padding + graph_height)/2 +")rotate(-90)")
+      .attr("transform", "translate("+ (left_padding/4) +","+ (top_padding + graph_height/2) +")rotate(-90)")
       .text("Normalized count");
 
       //prepare feature class array
@@ -244,7 +247,7 @@
         //console.log("mouseover");
 
         var xPosition = parseFloat(d3.select(this).attr("x")) + 1.5*bin_width_px;
-        var yPosition = parseFloat(d3.select(this).attr("y"));
+        var yPosition = parseFloat(d3.select(this).attr("y")) - 0.5*bin_height_px;
 
         d3.select(this).attr("fill", "orange");
 
